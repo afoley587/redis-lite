@@ -72,7 +72,7 @@ func (r *Resp) readInteger() (RespValue, error) {
 }
 
 func (r *Resp) readBulk() (RespValue, error) {
-	lengthLine := r.readLine()
+	lengthLine := r.readLine() // Read the string length and advance pointer to next line
 	length, err := strconv.Atoi(string(lengthLine))
 	if err != nil {
 		return RespValue{}, fmt.Errorf("invalid bulk string length: %v", err)
@@ -96,7 +96,7 @@ func (r *Resp) readBulk() (RespValue, error) {
 }
 
 func (r *Resp) readArray() (RespValue, error) {
-	lengthLine := r.readLine()
+	lengthLine := r.readLine() // Read the array length and advance pointer to next line
 	length, err := strconv.Atoi(string(lengthLine))
 	if err != nil {
 		return RespValue{}, fmt.Errorf("invalid array length: %v", err)
