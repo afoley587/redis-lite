@@ -1,7 +1,7 @@
 # Redis-Lite In Rust
 
-This is a redis-lite implementation in 
-[rust]().
+This is a redis-lite implementation in
+[rust](https://www.rust-lang.org/).
 
 ## Project Layout
 
@@ -24,7 +24,6 @@ This is a redis-lite implementation in
     │       └── mod.rs
 ```
 
-
 ## Running
 
 You can run this redis-lite server via `cargo`:
@@ -40,7 +39,7 @@ $ redis-cli
 redis-cli
 127.0.0.1:6379> ping hi
 "hi"
-127.0.0.1:6379> 
+127.0.0.1:6379>
 ```
 
 ## Demo

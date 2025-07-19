@@ -1,7 +1,7 @@
 # Redis-Lite In GoLang
 
-This is a redis-lite implementation in 
-[golang]().
+This is a redis-lite implementation in
+[golang](https://go.dev/).
 
 ## Project Layout
 
@@ -38,7 +38,7 @@ $ redis-cli
 redis-cli
 127.0.0.1:6379> ping hi
 "hi"
-127.0.0.1:6379> 
+127.0.0.1:6379>
 ```
 
 ## Demo
