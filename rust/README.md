@@ -44,4 +44,4 @@ redis-cli
 
 ## Demo
 
-<video src=./img/demo-rust.mov />
+https://github.com/user-attachments/assets/afb9098e-062e-47e1-961a-670ce8a16ace
