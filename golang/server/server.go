@@ -43,7 +43,7 @@ func (s *Server) ListenAndServe(aof *persistence.Aof) error {
 
 func handleConnection(conn net.Conn, aof *persistence.Aof) {
 	defer conn.Close()
-	rw := resp.NewRespWriter(conn)
+	rw := resp.NewRespWriter(conn) // See part 2
 
 	for {
 		buf := make([]byte, 1024)
@@ -57,7 +57,7 @@ func handleConnection(conn net.Conn, aof *persistence.Aof) {
 			continue
 		}
 
-		r := resp.NewResp(buf[:n])
+		r := resp.NewResp(buf[:n]) // See part 2
 		cmd, err := r.Read()
 		if err != nil || len(cmd.Array) == 0 {
 			log.Printf("Invalid command: %v", err)
@@ -66,7 +66,7 @@ func handleConnection(conn net.Conn, aof *persistence.Aof) {
 		}
 
 		commandName := strings.ToUpper(cmd.Array[0].Bulk)
-		handler, ok := store.Handlers[commandName]
+		handler, ok := store.Handlers[commandName] // See part 3
 		if !ok {
 			log.Printf("Unknown command: %s", commandName)
 			rw.Write(resp.RespValue{Type: resp.RespError, String: "ERR unknown command"})
@@ -74,11 +74,11 @@ func handleConnection(conn net.Conn, aof *persistence.Aof) {
 		}
 
 		// Write to AOF before executing command
-		if err := aof.Write(cmd); err != nil {
+		if err := aof.Write(cmd); err != nil { // See part 3
 			log.Printf("AOF write failed: %v", err)
 		}
 
 		response := handler(cmd.Array[1:])
-		rw.Write(response)
+		rw.Write(response) // See part 2
 	}
 }
