@@ -43,4 +43,4 @@ redis-cli
 
 ## Demo
 
-<video src=./img/demo-go.mov />
+https://github.com/user-attachments/assets/c0fb8c3a-2346-4267-bf79-08d44d1162a9
