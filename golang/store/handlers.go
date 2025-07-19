@@ -17,7 +17,13 @@ func ping(args []resp.RespValue) resp.RespValue {
 	if len(args) == 0 {
 		return resp.NewSimpleString("PONG")
 	}
-	return resp.NewBulkString(args[0].Bulk)
+
+	values := make([]string, 0, len(args))
+	for _, arg := range args {
+		values = append(values, arg.Bulk)
+	}
+
+	return resp.NewBulkString(strings.Join(values, " "))
 }
 
 func set(args []resp.RespValue) resp.RespValue {

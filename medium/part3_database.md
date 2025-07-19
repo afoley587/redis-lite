@@ -1,29 +1,47 @@
 # Building Redis-Lite in Go – Part 3: Command Handling and AOF Persistence
 
-In [Part 2](./part2.md), we implemented RESP — the protocol used by Redis to communicate with clients. In this final part of the series, we’ll hook up real commands like `SET`, `GET`, and `DEL`, wire them into an in-memory store, and add persistence using an append-only file (AOF).
+In
+[Part 2](./part2_resp.md),
+we implemented RESP — the protocol used by Redis to communicate with clients.
+In this final part of the series, we’ll hook up real commands like
+`SET`, `GET`, and `DEL`, wire them into an in-memory store, and add
+ persistence using an append-only file (AOF).
 
 ---
 
 ## In-Memory Storage
 
-The in-memory store is just a Go `map[string]RespValue` guarded by a `sync.RWMutex`. This keeps it safe for concurrent access by multiple client goroutines.
+The in-memory store is just a Go `map[string]RespValue` guarded by a `sync.RWMutex`.
+This keeps it safe for concurrent access by multiple client goroutines.
 
 ```go
-// store/db.go
 var (
  cache     = make(map[string]resp.RespValue)
  cacheLock = sync.RWMutex{}
 )
 ```
 
+Different go routines can then lock the mutex for reading (`RLock`)
+or writing (`Lock`) which we will see in
+[the next section](#command-dispatch).
+
 ---
 
 ## Command Dispatch
 
-Each RESP command (like `PING`, `SET`, etc.) is routed to a handler function. We define this mapping using a simple dictionary:
+Our redis implementation will handle 4 commands:
+
+1. [`DEL`](https://redis.io/docs/latest/commands/del/)
+1. [`GET`](https://redis.io/docs/latest/commands/get/)
+1. [`PING`](https://redis.io/docs/latest/commands/ping/)
+1. [`SET`](https://redis.io/docs/latest/commands/set/)
+
+Each RESP command (like `PING`, `SET`, etc.) will be routed
+to a handler function which will perform the corresponding action.
+
+We define this mapping using a simple dictionary:
 
 ```go
-// store/commands.go
 var Handlers = map[string]func([]resp.RespValue) resp.RespValue{
  "PING": ping,
  "GET":  get,
@@ -32,20 +50,47 @@ var Handlers = map[string]func([]resp.RespValue) resp.RespValue{
 }
 ```
 
-Let’s walk through a few key handlers:
+Let’s walk through a each handlers:
 
 ### `PING`
+
+Ping will return a `PONG` if no argument is provided.
+If an argument is provided, it will return a copy of the argument
+as a bulk string.
 
 ```go
 func ping(args []resp.RespValue) resp.RespValue {
  if len(args) == 0 {
   return resp.NewSimpleString("PONG")
  }
- return resp.NewBulkString(args[0].Bulk)
+
+ values := make([]string, 0, len(args))
+ for _, arg := range args {
+  values = append(values, arg.Bulk)
+ }
+
+ return resp.NewBulkString(strings.Join(values, " "))
 }
 ```
 
+If we run the server now, we would see
+
+```shell
+% redis-cli
+127.0.0.1:6379> ping
+PONG
+127.0.0.1:6379> ping hello world
+"hello world"
+127.0.0.1:6379>
+```
+
 ### `SET`
+
+Set will set a stored key to some value.
+If key already holds a value, it will be overwritten.
+It returns an OK response if the set was successfully
+executed.
+Otherwise, it'll return an error.
 
 ```go
 func set(args []resp.RespValue) resp.RespValue {
@@ -63,7 +108,21 @@ func set(args []resp.RespValue) resp.RespValue {
 }
 ```
 
+If we run the server now, we should see
+
+```shell
+% redis-cli
+127.0.0.1:6379> set 1
+(error) ERR wrong number of arguments for 'SET'
+127.0.0.1:6379> set 1 2
+OK
+127.0.0.1:6379>
+```
+
 ### `GET`
+
+Get will get the value of the key.
+If the key does not exist nil will be returned.
 
 ```go
 func get(args []resp.RespValue) resp.RespValue {
@@ -82,7 +141,26 @@ func get(args []resp.RespValue) resp.RespValue {
 }
 ```
 
+If we run the server now, we should see
+
+```shell
+% redis-cli
+127.0.0.1:6379> get
+(error) ERR wrong number of arguments for 'GET'
+127.0.0.1:6379> get 2
+(nil)
+127.0.0.1:6379> set 2 somevalue
+OK
+127.0.0.1:6379> get 2
+"somevalue"
+127.0.0.1:6379>
+```
+
 ### `DEL`
+
+Del will remove the specified keys.
+We will then return the number of keys deleted
+by this action.
 
 ```go
 func del(args []resp.RespValue) resp.RespValue {
@@ -102,6 +180,23 @@ func del(args []resp.RespValue) resp.RespValue {
  }
  return resp.NewInteger(deleted)
 }
+```
+
+If we run the server now, we should see
+
+```shell
+% redis-cli
+127.0.0.1:6379> del
+(error) ERR wrong number of arguments for 'DEL'
+127.0.0.1:6379> del dontexist
+(integer) 0
+127.0.0.1:6379> set 1 2
+OK
+127.0.0.1:6379> set 2 3
+OK
+127.0.0.1:6379> del 1 2
+(integer) 2
+127.0.0.1:6379>
 ```
 
 ---
