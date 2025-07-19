@@ -59,7 +59,7 @@ repos:
       - id: go-fmt
       - id: go-mod-tidy
   - repo: https://github.com/doublify/pre-commit-rust
-    rev: master
+    rev: v1.0
     hooks:
       - id: fmt
         name: rust-fmt-redis-lite

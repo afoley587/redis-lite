@@ -7,21 +7,19 @@ This is a redis-lite implementation in
 
 ```shell
 .
-├── README.md
-└── redis-lite
-    ├── Cargo.lock
-    ├── Cargo.toml
-    ├── src
-    │   ├── main.rs
-    │   ├── persistence
-    │   │   ├── aof.rs
-    │   │   └── mod.rs
-    │   ├── resp
-    │   │   ├── mod.rs
-    │   │   └── resp.rs
-    │   └── store
-    │       ├── db.rs
-    │       └── mod.rs
+├── Cargo.lock
+├── Cargo.toml
+└── src
+    ├── main.rs
+    ├── persistence
+    │   ├── aof.rs
+    │   └── mod.rs
+    ├── resp
+    │   ├── mod.rs
+    │   └── resp.rs
+    └── store
+        ├── db.rs
+        └── mod.rs
 ```
 
 ## Running
@@ -44,4 +42,4 @@ redis-cli
 
 ## Demo
 
-https://github.com/user-attachments/assets/afb9098e-062e-47e1-961a-670ce8a16ace
+<https://github.com/user-attachments/assets/afb9098e-062e-47e1-961a-670ce8a16ace>
