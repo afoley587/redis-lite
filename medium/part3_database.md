@@ -203,11 +203,63 @@ OK
 
 ## AOF Persistence
 
-To ensure that commands are not lost between restarts, we implement a persistence layer using an **append-only file** (AOF). This file stores each command as a RESP-encoded array. At startup, we read this file and replay each command.
+To ensure that commands are not lost between restarts,
+we will implement a persistence layer using an
+[**append-only file** (AOF)](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/#append-only-file).
+This file stores each command as a RESP-encoded array.
+If the node crashes, all of the commands are saved to disk.
+When it recovers, it can replay each command in order to rebuild
+the state of the database.
+
+For example, an AOF might look like:
+
+```txt
+*3
+$3
+set
+$4
+key1
+$6
+value1
+*3
+$3
+set
+$4
+key2
+$6
+value2
+*2
+$3
+del
+$4
+key1
+```
+
+Which would correspond to these commands:
+
+```shell
+% redis-cli
+127.0.0.1:6379> set key1 value1
+OK
+127.0.0.1:6379> set key2 value2
+OK
+127.0.0.1:6379> del key1
+(integer) 1
+127.0.0.1:6379>
+```
 
 ### Initialization
 
+Our `Aof` definition is below:
+
 ```go
+type Aof struct {
+ file   *os.File
+ rd     *bufio.Reader
+ mu     sync.Mutex
+ syncPd time.Duration
+}
+
 func NewAof(path string) (*Aof, error) {
  file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0666)
  if err != nil {
@@ -219,12 +271,47 @@ func NewAof(path string) (*Aof, error) {
   return nil, fmt.Errorf("failed to restore AOF: %w", err)
  }
 
- go a.sync()
+ go a.sync()  // discussed below
  return a, nil
 }
 ```
 
-We also spin up a background goroutine that flushes the file every second:
+Our AOF needs a few pieces of data:
+
+1. A file to write to.
+1. A way to read the file on startup.
+1. A mutex to ensure that no one concurrently writes to the file.
+1. A sync period. The redis AOF allows you to set the
+   [flush interval](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/#how-durable-is-the-append-only-file).
+   In our case, we will use the `everysec` method to flush to our AOF
+   once a second.
+
+---
+
+### Writing to the AOF
+
+When a command like `SET` or `DEL` is received,
+it’s immediately appended to the file:
+
+```go
+func (a *Aof) Write(val resp.RespValue) error {
+ a.mu.Lock()
+ defer a.mu.Unlock()
+
+ _, err := a.file.Write(val.Marshal())
+ if err != nil {
+  return fmt.Errorf("could not save value to AOF: %w", err)
+ }
+ return nil
+}
+```
+
+This is essentially the same process as writing a
+response to the client.
+In this case, however, we're writing each command to a file.
+
+As discussed above, we also need to flush this from our buffer
+to disk once a second to ensure that the changes are persisted.
 
 ```go
 func (a *Aof) sync() {
@@ -237,11 +324,16 @@ func (a *Aof) sync() {
 }
 ```
 
+In `NewAof`, we spawn the `sync` as a go routine so
+sleeping for a second doesn't block any operations.
+
 ---
 
 ### Replaying Commands on Startup
 
-When the server boots, it replays all valid commands in the AOF using RESP:
+So now we have a file with all of the commands saved to disk.
+But, if the server boots, we need a way to replay each command
+in order to return the state of the database.
 
 ```go
 func (a *Aof) Read() error {
@@ -272,26 +364,11 @@ func (a *Aof) Read() error {
 }
 ```
 
-This means you can restart the server without losing any previous state.
-
----
-
-### Writing to the AOF
-
-When a command like `SET` or `DEL` is received, it’s immediately appended to the file:
-
-```go
-func (a *Aof) Write(val resp.RespValue) error {
- a.mu.Lock()
- defer a.mu.Unlock()
-
- _, err := a.file.Write(val.Marshal())
- if err != nil {
-  return fmt.Errorf("could not save value to AOF: %w", err)
- }
- return nil
-}
-```
+In the `Read` function, we read each command in order
+and re-handle them.
+If there are unknown commands in our AOF, we make sure
+to report that to the logs because that could mean
+there was AOF corruption.
 
 ---
 
@@ -299,14 +376,18 @@ func (a *Aof) Write(val resp.RespValue) error {
 
 At this point, we’ve built a functional Redis clone that:
 
-- Accepts concurrent TCP clients
-- Parses and serializes RESP
-- Supports basic commands like `PING`, `GET`, `SET`, and `DEL`
-- Persists all write operations to an AOF file
-- Replays the AOF to restore state at startup
+* Accepts concurrent TCP clients
+* Parses and serializes RESP
+* Supports basic commands like `PING`, `GET`, `SET`, and `DEL`
+* Persists all write operations to an AOF file
+* Replays the AOF to restore state at startup
 
-There’s still room for improvement — things like expiration, pub/sub, and eviction — but this foundation gives you a deep understanding of how Redis works under the hood.
+There’s still room for improvement — things like expiration,
+pub/sub, and eviction — but this foundation gave me a better
+understanding of how Redis works under the hood.
 
 ---
 
-Thanks for following along. If you build something on top of this, or optimize it further, I’d love to hear about it.
+Thanks for following along.
+If you build something on top of this, or optimize it further,
+I’d love to hear about it.
