@@ -18,6 +18,25 @@ func NewResp(buf []byte) *Resp {
 	}
 }
 
+func (r *Resp) readLine() []byte {
+	start := r.curr
+	for {
+		if r.curr+1 >= len(r.buf) || (r.buf[r.curr] == '\r' && r.buf[r.curr+1] == '\n') {
+			break
+		}
+		r.curr++
+	}
+	end := r.curr
+	r.curr += 2 // skip CRLF
+	return r.buf[start:end]
+}
+
+func (r *Resp) readByte() byte {
+	b := r.buf[r.curr]
+	r.curr++
+	return b
+}
+
 func (r *Resp) Read() (RespValue, error) {
 	if r.curr >= len(r.buf) {
 		return RespValue{}, fmt.Errorf("empty buffer")
@@ -72,7 +91,7 @@ func (r *Resp) readInteger() (RespValue, error) {
 }
 
 func (r *Resp) readBulk() (RespValue, error) {
-	lengthLine := r.readLine()
+	lengthLine := r.readLine() // Read the string length and advance pointer to next line
 	length, err := strconv.Atoi(string(lengthLine))
 	if err != nil {
 		return RespValue{}, fmt.Errorf("invalid bulk string length: %v", err)
@@ -96,7 +115,7 @@ func (r *Resp) readBulk() (RespValue, error) {
 }
 
 func (r *Resp) readArray() (RespValue, error) {
-	lengthLine := r.readLine()
+	lengthLine := r.readLine() // Read the array length and advance pointer to next line
 	length, err := strconv.Atoi(string(lengthLine))
 	if err != nil {
 		return RespValue{}, fmt.Errorf("invalid array length: %v", err)
@@ -116,23 +135,4 @@ func (r *Resp) readArray() (RespValue, error) {
 	}
 
 	return NewArray(values), nil
-}
-
-func (r *Resp) readLine() []byte {
-	start := r.curr
-	for {
-		if r.curr+1 >= len(r.buf) || (r.buf[r.curr] == '\r' && r.buf[r.curr+1] == '\n') {
-			break
-		}
-		r.curr++
-	}
-	end := r.curr
-	r.curr += 2 // skip CRLF
-	return r.buf[start:end]
-}
-
-func (r *Resp) readByte() byte {
-	b := r.buf[r.curr]
-	r.curr++
-	return b
 }
