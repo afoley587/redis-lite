@@ -79,26 +79,3 @@ pub fn handle_resp(command: &RespValue) -> RespValue {
         _ => RespValue::Error("Invalid command".to_string()),
     }
 }
-
-import tracemalloc
-tracemalloc.start()
-
-class F:
-    def __init__(self):
-        self.l = list(range(10_000_000))
-
-LEAK_REGISTRY = []
-        
-def lets_leak():
-    
-    f = F()
-    LEAK_REGISTRY.append(f)
-
-lets_leak()
-
-snapshot = tracemalloc.take_snapshot()
-top_stats = snapshot.statistics('lineno')
-
-print("[ Top 10 ]")
-for stat in top_stats[:10]:
-    print(stat)

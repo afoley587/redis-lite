@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a repo dedicated to my attempts at building a lite redis server in 
+This is a repo dedicated to my attempts at building a lite redis server in
 multiple languages.
 My hopes here is to continue learning new things (protocols, technologies, etc.)
 in different languages (Golang, Rust, etc.).
@@ -16,7 +16,7 @@ Each `redis-lite` implementation supports the following commands:
 1. [`PING`](https://redis.io/docs/latest/commands/ping/)
 1. [`SET`](https://redis.io/docs/latest/commands/set/)
 
-Each implementation also uses the 
+Each implementation also uses the
 [append-only file](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/#append-only-file)
 persistence method.
 
