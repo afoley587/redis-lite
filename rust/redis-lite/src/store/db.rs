@@ -6,16 +6,22 @@ fn ping(args: Vec<RespValue>) -> RespValue {
     if args.is_empty() {
         RespValue::SimpleString("PONG".to_string())
     } else {
-        match &args[0] {
-            RespValue::BulkString(Some(s)) => RespValue::SimpleString(s.clone()),
-            _ => RespValue::Error("Invalid PING argument".to_string()),
+        let mut parts = Vec::with_capacity(args.len());
+
+        for arg in args {
+            match arg {
+                RespValue::BulkString(s) => parts.push(s),
+                _ => return RespValue::Error("Invalid PING argument".to_string()),
+            }
         }
+
+        RespValue::BulkString(parts.join(" "))
     }
 }
 
 fn get(args: Vec<RespValue>) -> RespValue {
     let key = match args.get(0) {
-        Some(RespValue::BulkString(Some(k))) => k,
+        Some(RespValue::BulkString(k)) => k,
         _ => return RespValue::Error("Missing key for GET".to_string()),
     };
 
@@ -32,7 +38,7 @@ fn set(args: Vec<RespValue>) -> RespValue {
     }
 
     let key = match &args[0] {
-        RespValue::BulkString(Some(k)) => k.clone(),
+        RespValue::BulkString(k) => k.clone(),
         _ => return RespValue::Error("Invalid key for SET".to_string()),
     };
 
@@ -48,7 +54,7 @@ fn del(args: Vec<RespValue>) -> RespValue {
     let mut map = CACHE.write().unwrap();
 
     for arg in args {
-        if let RespValue::BulkString(Some(k)) = arg {
+        if let RespValue::BulkString(k) = arg {
             if map.remove(&k).is_some() {
                 deleted += 1;
             }
@@ -65,7 +71,7 @@ pub fn handle_resp(command: &RespValue) -> RespValue {
     };
 
     let cmd = match arr.get(0) {
-        Some(RespValue::BulkString(Some(s))) => s.to_lowercase(),
+        Some(RespValue::BulkString(s)) => s.to_lowercase(),
         _ => return RespValue::Error("Bulk string command expected".to_string()),
     };
 

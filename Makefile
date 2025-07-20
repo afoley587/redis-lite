@@ -12,7 +12,7 @@ run-golang:  ## Runs the golang redis-lite server
 	@cd golang && go run cmd/redis-lite/main.go
 
 run-rust:  ## Runs the rust redis-lite server
-	@cd rust && cargo run
+	@cd rust/redis-lite && cargo run
 
 run-pre-commit:  ## Runs pre-commit for all files
 	@pre-commit run --all-files

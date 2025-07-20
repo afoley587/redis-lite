@@ -5,7 +5,7 @@ pub enum RespValue {
     SimpleString(String),
     Error(String),
     Integer(i32),
-    BulkString(Option<String>),
+    BulkString(String),
     Array(Vec<RespValue>),
     Null,
 }
@@ -15,8 +15,7 @@ pub fn marshal(value: &RespValue) -> Vec<u8> {
         RespValue::SimpleString(s) => format!("+{}\r\n", s).into_bytes(),
         RespValue::Error(s) => format!("-{}\r\n", s).into_bytes(),
         RespValue::Integer(i) => format!(":{}\r\n", i).into_bytes(),
-        RespValue::BulkString(Some(s)) => format!("${}\r\n{}\r\n", s.len(), s).into_bytes(),
-        RespValue::BulkString(None) => b"$-1\r\n".to_vec(),
+        RespValue::BulkString(s) => format!("${}\r\n{}\r\n", s.len(), s).into_bytes(),
         RespValue::Array(arr) => {
             let mut buf = format!("*{}\r\n", arr.len()).into_bytes();
             for item in arr {
@@ -70,7 +69,7 @@ pub fn read_resp<R: BufRead>(reader: &mut R) -> Result<RespValue, std::io::Error
         reader.read_exact(&mut buf)?;
 
         let s = String::from_utf8_lossy(&buf[..str_len]).to_string();
-        elements.push(RespValue::BulkString(Some(s)));
+        elements.push(RespValue::BulkString(s));
     }
 
     Ok(RespValue::Array(elements))
