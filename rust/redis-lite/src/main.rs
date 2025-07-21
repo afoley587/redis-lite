@@ -10,11 +10,9 @@ mod prelude {
     pub use once_cell::sync::Lazy;
     pub use std::{
         collections::HashMap,
-        env,
         fs::File,
         io::{BufReader, BufWriter, prelude::*},
         net::{TcpListener, TcpStream},
-        process,
         sync::{Arc, Mutex, RwLock},
         thread,
         time::Duration,
@@ -39,7 +37,8 @@ fn main() {
     let listener = TcpListener::bind(args.addr).unwrap();
 
     let aof = Arc::new(Mutex::new(
-        Aof::new(args.aof_path.as_str(), 1).expect("Failed to open AOF"),
+        // Discussed in part 3
+        Aof::new(args.aof_path.as_str()).expect("Failed to open AOF"),
     ));
 
     let aof_clone = Arc::clone(&aof);
@@ -61,7 +60,7 @@ fn main() {
         let _aof = Arc::clone(&aof);
 
         thread::spawn(|| {
-            let _ = handle_connection(stream, _aof);
+            let _ = handle_connection(stream, _aof); // Discussed below
         });
     }
 }
@@ -70,11 +69,14 @@ fn handle_connection(stream: TcpStream, aof: Arc<Mutex<Aof>>) -> Result<(), std:
     let mut buf_reader = BufReader::new(stream);
 
     loop {
-        let command = read_resp(&mut buf_reader)?;
+        let command = read_resp(&mut buf_reader)?; // Discussed in part 2
 
-        let response = handle_resp(&command);
+        let response = handle_resp(&command); // Discussed in part 3
 
-        aof.lock().unwrap().write(&command)?;
+        if !matches!(response, RespValue::Error(_)) {
+            aof.lock().unwrap().write(&command)?;
+        }
+
         buf_reader
             .get_mut()
             .write_all(marshal(&response).as_ref())

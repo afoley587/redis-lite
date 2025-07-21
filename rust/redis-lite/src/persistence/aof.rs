@@ -4,11 +4,10 @@ pub struct Aof {
     reader: BufReader<File>,
     writer: BufWriter<File>,
     lock: Mutex<()>,
-    sync_period: Duration,
 }
 
 impl Aof {
-    pub fn new(path: &str, sync_period_secs: u64) -> std::io::Result<Self> {
+    pub fn new(path: &str) -> std::io::Result<Self> {
         let write_file = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
@@ -23,7 +22,6 @@ impl Aof {
             reader,
             writer,
             lock: Mutex::new(()),
-            sync_period: Duration::from_secs(sync_period_secs),
         })
     }
 
