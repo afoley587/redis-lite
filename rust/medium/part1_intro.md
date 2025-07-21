@@ -29,7 +29,7 @@ will be fleshed out later.
 
 Let’s start with the main entrypoint in `src/main.rs`:
 
-```go
+```rust
 mod persistence;
 mod resp;
 mod store;
@@ -131,7 +131,7 @@ However, we didn't discuss the actual handling of each client request.
 The `handle_connection` function reads RESP-encoded data from the client
 and dispatches commands:
 
-```go
+```rust
 fn handle_connection(stream: TcpStream, aof: Arc<Mutex<Aof>>) -> Result<(), std::io::Error> {
     let mut buf_reader = BufReader::new(stream);
 
